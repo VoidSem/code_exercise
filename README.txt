@@ -5,3 +5,4 @@ separate storage section01
 finish section02_01 at 20190416
 finish section02_02 at 20190417
 finish section03_01 at 20190417
+finish section03_02 at 20190417

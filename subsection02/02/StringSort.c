@@ -174,6 +174,8 @@ int InitSort(const char *file, strInf_t *strInf)
         goto ERROR;
     }
 
+    memset(strInf, 0, sizeof(strInf_t));
+
     //save the file name
     snprintf(strInf->fileName, MAX_NAME_LEN, "%s", file);
     FILE *fp = fopen(file, "r+");

@@ -18,8 +18,6 @@ void sig_handler(int signo)
         printf("Bye\n");
         exit(0);
     }
-    else
-        printf("ignor sig\n");
 }
 
 int main(void)
@@ -34,8 +32,7 @@ int main(void)
         return -1;
     }
 
-    while(1)
-    {
+    while (1) {
         printf("Hell0\n");
         sleep(1);
     }

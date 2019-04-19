@@ -10,7 +10,7 @@ fileSize=1
 
 # fibonacci
 #
-#        | 0,                   n = 0              
+#        | 0,                   n = 0
 # f(n) = | 1,                   n = 1
 #        | f(n-1) + f(n-2),     n >= 2
 #
@@ -33,9 +33,8 @@ function FuncFibonacci()
         tmp1=$tmp2
         tmp2=$tmp
         let i++
-    done  
-
-    return $tmp
+    done
+    fileSize=$tmp
 }
 
 
@@ -43,7 +42,7 @@ function FuncFibonacci()
 for i in $(seq 1 $fileCount)
 do
 
-    fileName=000$i.bin
+    fileName=$i.bin
 
     case "$1" in
         --clean)
@@ -54,8 +53,7 @@ do
         *)
             #get file size
             FuncFibonacci $i
-            fileSize=$?
-            
+
             #create and resize file
             dd if=/dev/zero of=$fileName bs=$fileSize count=1 &>> /dev/null
             ;;

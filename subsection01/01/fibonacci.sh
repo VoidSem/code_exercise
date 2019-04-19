@@ -42,7 +42,8 @@ function FuncFibonacci()
 for i in $(seq 1 $fileCount)
 do
 
-    fileName=$i.bin
+    curNum=`printf "%04d\n" $i`
+    fileName=$curNum.bin
 
     case "$1" in
         --clean)

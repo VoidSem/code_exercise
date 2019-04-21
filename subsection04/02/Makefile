@@ -5,29 +5,30 @@
 
 #define var
 
-CC = gcc
-TARGET1 = sockServer
-TARGET2 = sockClient
-CFLAGS =
+CXX = g++
+TARGET1 = ServerDemo
+TARGET2 = ClientDemo
+CXXFLAGS = -pthread
 
 all:  $(TARGET1) $(TARGET2)
 #files
-objects = $(TARGET1).o
-headers = sockCommon.h
+objects = $(TARGET1).o Server.o
+headers = Server.h Common.h
 
 #rules
 $(TARGET1): $(objects)
-	$(CC)  $(CFLAGS) $^ -o $@
+	$(CXX)  $(CFLAGS) $^ -o $@
 
-%.o: %.c $(headers)
-	$(CC) -c $(CFLAGS) $< -o $@
+%.o: %.cpp $(headers)
+	$(CXX) -c $(CFLAGS) $< -o $@
 #files
-OBJECTS = $(TARGET2).o
+OBJECTS = $(TARGET2).o Client.o
+HEADERS = Client.h COmmon.h
 $(TARGET2): $(OBJECTS)
-	$(CC)  $(CFLAGS) $^ -o $@
+	$(CXX)  $(CXXFLAGS) $^ -o $@
 
-%.o: %.c $(headers)
-	$(CC) -c $(CFLAGS) $< -o $@
+%.o: %.cpp $(headers)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY : clean
 clean :

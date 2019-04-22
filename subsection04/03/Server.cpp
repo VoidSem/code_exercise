@@ -167,8 +167,9 @@ int Server::AcceptHandle()
     struct sockaddr_in client_address;
     socklen_t len = 0;
 
-    int clientFd = accept(socketFd, ( struct sockaddr* )&client_address, &len);
+    int clientFd = accept(socketFd, (struct sockaddr*)&client_address, &len);
     if (clientFd < 0) {
+        perror("accept error");
         return -1;
     }
 
@@ -252,7 +253,9 @@ int Server::Start()
     }
     acceptRun = 1;
     acceptThread = new thread(AcceptThread, (void *)this);
+#ifdef THTEAD_READ
     clientThread = new thread(ClientThread, (void *)this);
+#endif
     static int cSum = 0;
     cout<<"start epoll wait..."<<endl;
     while (1)
@@ -302,7 +305,7 @@ int Server::Start()
                     }
                 }
                 else {  //client msg
-#if 0
+#ifndef THTEAD_READ
                     int ret = ClientHandle(tmpFd);
                     if(ret < 0) {
                         cerr<< strerror(errno)<<endl;

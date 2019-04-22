@@ -13,6 +13,8 @@
 #include <mutex>
 #include <condition_variable>
 
+//#define THREAD_READ
+
 class Server {
     public:
         Server(int SERVER_PORT, const char *SERVER_IP, int  backLog);

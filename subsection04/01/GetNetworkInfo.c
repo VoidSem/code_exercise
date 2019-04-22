@@ -28,66 +28,127 @@
 #define         MAX_CARD_NUM            (8)
 
 typedef	struct netCard_s {
-	char macAddr[ADDR_LEN];
-	char inetAddr[ADDR_LEN];
-	char bcastAddr[ADDR_LEN];
-	char addrMask[ADDR_LEN];
+    char macAddr[ADDR_LEN];
+    char inetAddr[ADDR_LEN];
+    char bcastAddr[ADDR_LEN];
+    char addrMask[ADDR_LEN];
 }netCard_t;
 
 int GetNetInfo(char *buffer, int bufSize);
+
+/*Get running card*/
+static int GetRunningCards(const char *cardName, char *buffer);
+
+/*parse item infomation*/
 static int GetItem(const char *buf, const char *key,
         int len, char c, char *str);
+
+/*get card infomation*/
 int GetCardInfo(const char *buffer, netCard_t *netCard);
 
+
+int main(int argc, char **argv)
+{
+    char card[MAX_CARD_NUM][ADDR_LEN] = {};
+    char netInfo[BUFSIZ] = {};
+    netCard_t netCard = {};
+    int ret = -1;
+
+    if (GetNetInfo(netInfo, BUFSIZ) < 0) {
+        printf("get netinfo failed\n");
+        return -1;
+    }
+
+    char *p = strchr(netInfo, '\n');
+    char *pStart = netInfo;
+    int cardNum = 0;
+    while (p = strchr(pStart, '\n')) {
+        memcpy(card[cardNum], pStart, (p - pStart));
+        ++cardNum;
+        pStart = ++p;
+    }
+
+    int i = 0;
+    for (i = 0; i < cardNum; ++i) {
+        if(GetRunningCards(card[i], netInfo) == 0 ) {
+            break;
+        }
+        else
+        {
+            ret = -2;
+            goto ERROR;
+        }
+    }
+
+    if (GetCardInfo(netInfo, &netCard) > 0) {
+        printf("card: %s\nmacAddr: %s\n", card[i], netCard.macAddr);
+        printf("inet_addr: %s\nbcastAddr: %s\naddrMask: %s\n",
+                netCard.inetAddr, netCard.bcastAddr, netCard.addrMask);
+    }
+    else
+    {
+        ret = -3;
+        goto ERROR;
+    }
+
+    return 0;
+ERROR:
+    printf("get network infomation failed:%d\n",ret);
+    return ret;
+}
+
+/*Get system Network Cards*/
 int GetNetInfo(char *buffer, int bufSize)
 {
-	char  cmd[128];
-	FILE  *fp;
-	int    readByte;
-	int    ret =0;
+    char  cmd[128];
+    FILE  *fp;
+    int    readByte;
+    int    ret =0;
 
-	memset( buffer, 0, BUFSIZ );
-	memset( cmd, 0, 100 );
-	sprintf(cmd, "ifconfig | grep -v -i \"LoopBack\""
-                "| grep \"HWaddr\" | awk '{print $1}'");
+    memset( buffer, 0, BUFSIZ );
+    memset( cmd, 0, 100 );
+    sprintf(cmd, "ifconfig | grep -v -i \"LoopBack\""
+            "| grep \"HWaddr\" | awk '{print $1}'");
 
-	fp = popen(cmd, "r");
-	if (NULL == fp){
-		printf("popen:%s failed\n", cmd);
-		return -1;
-	}
-	readByte = fread(buffer, 1, bufSize - 1, fp);
-	pclose(fp);
-	if (readByte <= 0) {
-		fprintf(stderr, "%s: NO FOUND\r\n",cmd);
-		return -2;
-	}
-	return 0;
+    fp = popen(cmd, "r");
+    if (NULL == fp){
+        printf("popen:%s failed\n", cmd);
+        return -1;
+    }
+    readByte = fread(buffer, 1, bufSize - 1, fp);
+    pclose(fp);
+    if (readByte <= 0) {
+        fprintf(stderr, "%s: NO FOUND\r\n",cmd);
+        return -2;
+    }
+    return 0;
 }
 
+
+/*Get running card*/
 static int GetRunningCards(const char *cardName, char *buffer)
 {
-	//char  buffer[BUFSIZ];
-	char  cmd[100];
-	FILE  *fp;
-	int    readByte;
+    //char  buffer[BUFSIZ];
+    char  cmd[100];
+    FILE  *fp;
+    int    readByte;
 
-	sprintf(cmd, "ifconfig %s", cardName);
-	fp = popen(cmd, "r");
-	if (NULL == fp){
-		printf("popen:%s failed\n", cmd);
-		return -1;
-	}
-	readByte = fread(buffer, 1, BUFSIZ-1, fp);
-	pclose(fp);
-	if (readByte > 0 && strstr(buffer, RUNNING_STR)) {
-		//printf("%s:Link\n", cardName);
-		return 0;
-	}
-	return -1;
+    sprintf(cmd, "ifconfig %s", cardName);
+    fp = popen(cmd, "r");
+    if (NULL == fp){
+        printf("popen:%s failed\n", cmd);
+        return -1;
+    }
+    readByte = fread(buffer, 1, BUFSIZ-1, fp);
+    pclose(fp);
+    if (readByte > 0 && strstr(buffer, RUNNING_STR)) {
+        //printf("%s:Link\n", cardName);
+        return 0;
+    }
+    return -1;
 }
 
-
+/*card infomation item parse*/
 static int GetItem(const char *buf, const char *key, int len, char c, char *str)
 {
     char *p = strstr(buf, key);
@@ -110,6 +171,8 @@ static int GetItem(const char *buf, const char *key, int len, char c, char *str)
     return 0;
 }
 
+
+/*get running card infomation*/
 int GetCardInfo(const char *buffer, netCard_t *netCard)
 {
     if (NULL == buffer || NULL == netCard) {
@@ -160,52 +223,3 @@ int GetCardInfo(const char *buffer, netCard_t *netCard)
     return count;
 }
 
-int main(int argc, char **argv)
-{
-	char card[MAX_CARD_NUM][ADDR_LEN] = {};
-        char netInfo[BUFSIZ] = {};
-	netCard_t netCard = {};
-        int ret = -1;
-
-	if (GetNetInfo(netInfo, BUFSIZ) < 0) {
-            printf("get netinfo failed\n");
-            return -1;
-        }
-
-        char *p = strchr(netInfo, '\n');
-        char *pStart = netInfo;
-        int cardNum = 0;
-        while (p = strchr(pStart, '\n')) {
-            memcpy(card[cardNum], pStart, (p - pStart));
-            ++cardNum;
-            pStart = ++p;
-        }
-
-        int i = 0;
-	for (i = 0; i < cardNum; ++i) {
-		if(GetRunningCards(card[i], netInfo) == 0 ) {
-                    break;
-		}
-                else
-                {
-                    ret = -2;
-                    goto ERROR;
-                }
-	}
-
-        if (GetCardInfo(netInfo, &netCard) > 0) {
-            printf("card: %s\nmacAddr: %s\n", card[i], netCard.macAddr);
-                printf("inet_addr: %s\nbcastAddr: %s\naddrMask: %s\n",
-                    netCard.inetAddr, netCard.bcastAddr, netCard.addrMask);
-        }
-        else
-        {
-            ret = -3;
-            goto ERROR;
-        }
-
-        return 0;
-ERROR:
-        printf("get network infomation failed:%d\n",ret);
-        return ret;
-}

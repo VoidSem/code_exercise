@@ -41,6 +41,7 @@ extern "C" {
 #include <sys/epoll.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <signal.h>
 
     typedef struct socketMsg_s {
         unsigned long size;

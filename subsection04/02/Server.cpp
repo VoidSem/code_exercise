@@ -31,6 +31,9 @@ int Server::Init()
         return -1;
     }
 
+    //ignore SIGPIPE
+    signal(SIGPIPE, SIG_IGN);
+
     int ret = bind(socketFd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
     if (ret < 0) {
         perror("bind error");

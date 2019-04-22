@@ -19,13 +19,17 @@ else
     exit -1
 fi
 
-#caculate total file size
-ls -l -R $dir | awk 'BEGIN{sum = 0} \
-                      /^-/{sum += $5} \
-                       END{print "total: ", sum, "Bytes"}'
-
+:<<@
 #caculate large file sum
 ls -l -R $dir | awk 'BEGIN{{sum = 0} {mSize = 1024 * 1024}}\
                 /^-/{if ($5 > mSize)\
                  {let sum++ }}\
                      END{print "large file total: "sum}'
+@
+
+#caculate total file size
+ls -l -R $dir | awk 'BEGIN{{sum = 0} {largeSum = 0} {mSize = 1024 * 1024}} \
+                /^-/{ {sum += $5} \
+                        {if ($5 > mSize) { let largeSum++}}} \
+                END{{print "totalSize: ", sum, "Bytes"}\
+                       {print "totalLargeFile: ", largeSum}}'

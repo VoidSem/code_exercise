@@ -11,3 +11,4 @@ finish section03_05 at 20190418
 finish section04_01 at 20190419
 finish section04_02 at 20190419
 finish section04_03 at 20190422
+optimize section01 at 20190422

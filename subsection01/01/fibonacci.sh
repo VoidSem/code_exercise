@@ -1,64 +1,27 @@
 #!/bin/bash
 # fibonacci.sh
-# create or rm(with --clean) files
+# rm(with --clean)
 # liuxueneng@airfly
 # 2019/04/15
+# modify 2019/04/22
 
-fileCount=45
-fileName=0001.bin
-fileSize=1
+#rm cmd
+if [ XX$1 == "XX--clean" ]; then
+    rm *.bin -rf
+    exit
+fi
 
-# fibonacci
-#
-#        | 0,                   n = 0
-# f(n) = | 1,                   n = 1
-#        | f(n-1) + f(n-2),     n >= 2
-#
-#
-function FuncFibonacci()
-{
-    local tmp1=0
-    local tmp2=1
-    local tmp=1
-    local i=2
+ppreS=0
+preS=1
 
-    if [ $1 -lt 2 ]; then
-        return $tmp
-    fi
+dd if=/dev/zero of=0001.bin bs=1 count=1 &>> /dev/null
 
-    # f(n) = f(n-1) + f(n-2)
-    while [ $i -le $1 ]
-    do
-        tmp=$(($tmp1 + $tmp2))
-        tmp1=$tmp2
-        tmp2=$tmp
-        let i++
-    done
-    fileSize=$tmp
-}
-
-
-#start run
-for i in $(seq 1 $fileCount)
+for i in $(seq 2 12)
 do
-
-    curNum=`printf "%04d\n" $i`
-    fileName=$curNum.bin
-
-    case "$1" in
-        --clean)
-            if [  -f "$fileName" ]; then
-                rm $fileName
-            fi
-            ;;
-        *)
-            #get file size
-            FuncFibonacci $i
-
-            #create and resize file
-            dd if=/dev/zero of=$fileName bs=$fileSize count=1 &>> /dev/null
-            ;;
-    esac
-
+        S=$[$ppreS+$preS]
+        #echo $S
+        ppreS=$preS
+        preS=$S
+        dd if=/dev/zero of=`printf %04d $i`.bin bs=$S count=1 &>> /dev/null
 done
 

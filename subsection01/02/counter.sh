@@ -20,13 +20,12 @@ else
 fi
 
 #caculate total file size
-ls -l -R $dir | grep total \
-                | awk 'BEGIN{sum = 0} \
-                      {sum += $2} \
+ls -l -R $dir | awk 'BEGIN{sum = 0} \
+                      /^-/{sum += $5} \
                        END{print "total: ", sum, "Bytes"}'
 
 #caculate large file sum
-ls -l -R | awk 'BEGIN{{sum = 0} {mSize = 1024 * 1024}}\
+ls -l -R $dir | awk 'BEGIN{{sum = 0} {mSize = 1024 * 1024}}\
                 /^-/{if ($5 > mSize)\
                  {let sum++ }}\
                      END{print "large file total: "sum}'

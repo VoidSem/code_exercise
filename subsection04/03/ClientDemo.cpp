@@ -70,7 +70,7 @@ static int ClientFunc(int i)
     demoClient.RecvMsg(&msg);
     long long endTime = GetNowMs();
     //cout << "totalTime: " << endTime - startTime << "ms" <<endl;
-    cout<< msg.data << (endTime - startTime) <<endl;
+    cout<< msg.data << " use "<<(endTime - startTime) <<"ms"<<endl;
 
     //wait for close
     sleep(CLIENT_WAIT_SEC);

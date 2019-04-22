@@ -13,7 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 
-//#define THREAD_READ
+#define THREAD_READ 1
 
 class Server {
     public:

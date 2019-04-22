@@ -16,7 +16,7 @@
 
 #define         EPOLL_SIZE              (65535)
 #define         COMMON_SERVER_PORT      (8000)
-#define         COMMON_BACK_LOG      	(1024)
+#define         COMMON_BACK_LOG      	(1 << 15)
 #define         COMMON_SERVER_IP        ("127.0.0.1")
 
 #define         CLIENT_WAIT_SEC         (10)

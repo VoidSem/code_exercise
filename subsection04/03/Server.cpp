@@ -20,7 +20,6 @@ Server::Server(int port, const char *ip, int backLog)
     serverAddr.sin_addr.s_addr = inet_addr(ip);
     this->backLog = backLog;
     socketFd = 0;
-    // epool fd
     epFd = 0;
     acceptRun = 0;
     acceptThread = NULL;
@@ -38,7 +37,8 @@ int Server::Init()
         return -1;
     }
 
-    /*ignore sigpipe*/
+    /* ignore sigpipe */
+    /*else we may crash*/
     signal(SIGPIPE, SIG_IGN);
 
     int ret = bind(socketFd, (struct sockaddr *)&serverAddr, sizeof(serverAddr));
@@ -46,12 +46,7 @@ int Server::Init()
         perror("bind error");
         return -2;
     }
-#if 0
-    int set = 1;
-    //set opt
-    setsockopt(socketFd, SOL_SOCKET, SO_SNDBUF, (char *)&set, sizeof(set));
-    setsockopt(socketFd, SOL_SOCKET, SO_RCVBUF, (char *)&set, sizeof(set));
-#endif
+
     ret = listen(socketFd, backLog);
     if(ret < 0) {
         perror("listen error");
@@ -154,6 +149,7 @@ int Server::DoClientHandle()
         ClientHandle(fd);
     }
 }
+
 int Server::AcceptThread(void *arg)
 {
     Server *svr = (Server *)arg;
@@ -169,20 +165,13 @@ int Server::AcceptHandle()
 
     int clientFd = accept(socketFd, (struct sockaddr*)&client_address, &len);
     if (clientFd < 0) {
-        perror("accept error");
+        perror(" accept error");
         return -1;
     }
 
-#if 0
-    //set opt
-    int val = 0;
-    setsockopt(clientFd,SOL_SOCKET,SO_SNDBUF,(char *)&val,sizeof(val));
-    setsockopt(clientFd,SOL_SOCKET,SO_RCVBUF,(char *)&val,sizeof(val));
-#endif
     //get first notifyFd
     if(NO_INIT_FD == notifyFd) {
         notifyFd = clientFd;
-        // add
         AddEpollFd(epFd, notifyFd, true);
         return 0;
     }
@@ -195,10 +184,6 @@ int Server::AcceptHandle()
     msg.size = sizeof(clientFd);
     msg.data = buf;
     notifyClient->SendMsg(&msg);
-#if 1
-    static int c = 0;
-    cout <<"acc "<<++c<<endl;
-#endif
     return 0;
 }
 
@@ -269,11 +254,11 @@ int Server::Start()
             return -1;
         }
 
-        //cout << "sum event " << eventNum << endl;
         //handle epEvents
         for(int i = 0; i < eventNum; ++i) {
             int tmpFd = epEvents[i].data.fd;
-            if ((epEvents[i].events & EPOLLERR) || (epEvents[i].events & EPOLLRDHUP)) {
+            if ((epEvents[i].events & EPOLLERR)
+                    || (epEvents[i].events & EPOLLRDHUP)) {
                 if(tmpFd == socketFd) {
                     cerr << "socket wrong" <<endl;
                     epoll_ctl(epFd, EPOLL_CTL_DEL, tmpFd, NULL);
@@ -286,37 +271,43 @@ int Server::Start()
                 }
             }
             else if (epEvents[i].events & EPOLLIN) {
-                if(tmpFd == notifyFd) {//new client notify
+                /*new client data from accept thread*/
+                if(tmpFd == notifyFd) {
                     char buf[BUFSIZ] = {};
                     socketMsg_t msg = {};
                     msg.size = sizeof(tmpFd);
                     msg.data = buf;
                     //cout <<"recv notify client" <<endl;
                     int ret =  0;
-                    while((ret = CommonRecvMsg(tmpFd, &msg,MSG_DONTWAIT)) > 0){
+                    while((ret = CommonRecvMsg(tmpFd, &msg, MSG_DONTWAIT)) > 0){
                         if (ret >= sizeof(tmpFd)) {
-                            cout <<"Add: "<< ++cSum <<endl;
+                            //cout <<"Add: "<< ++cSum <<endl;
                             AddEpollFd(epFd, *(int  *)buf, true);
                         }
                         else {
-                            cerr<< "recv notify fd" <<endl;
+                            cerr<< "recv notify " << ret <<endl;
                             break;
                         }
                     }
                 }
-                else {  //client msg
-#ifndef THTEAD_READ
-                    int ret = ClientHandle(tmpFd);
-                    if(ret < 0) {
-                        cerr<< strerror(errno)<<endl;
-                    }
-#else
+                else {
+                    /*client data comming*/
+#ifdef THTEAD_READ
+                    if (i % 2) {
                         AddHandleList(tmpFd);
+                    }
+                    else
 #endif
+                    {
+                        int ret = ClientHandle(tmpFd);
+                        if(ret < 0) {
+                            cerr<< strerror(errno)<<endl;
+                        }
+                    }
                 }
             }
             else {
-                cout<< "!!UNKNOWN events"<<endl;
+                cerr<< "!!UNKNOWN events"<<endl;
             }
         }
     }

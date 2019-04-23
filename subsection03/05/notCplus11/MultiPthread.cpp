@@ -1,9 +1,9 @@
 /*
- * name: MultiPthread.cpp
+ * Name:        MultiPthread.cpp
  * Description: multi pthread access members
- * author:liuxueneng@airfly
- * date:20190418
- *
+ * Author:      liuxueneng@airfly
+ * Date:        20190418
+ * Modify:      20190423
  */
 
 #include "MultiPthread.h"
@@ -19,15 +19,9 @@ MultiPthread::MultiPthread(int64_t num)
     r = 0;
     s = 0;
     maxNum = num;
-    totalTime = 0;
 
     /* init mutex */
-    pthread_mutex_init(&pThreadMutexP, NULL);
-    pthread_mutex_init(&pThreadMutexQ, NULL);
-    pthread_mutex_init(&pThreadMutexR, NULL);
-    pthread_mutex_init(&pThreadMutexS, NULL);
-
-
+    pthread_mutex_init(&pThreadMutex, NULL);
 }
 
 /* get now time us */
@@ -45,6 +39,12 @@ void MultiPthread::RunPthread()
     void *rst = NULL;
     long long startTime = GetNowMs();
 
+    /* phtread id */
+    pthread_t pthreadId1;
+    pthread_t pthreadId2;
+    pthread_t pthreadId3;
+    pthread_t pthreadId4;
+
     /* creat a new thread */
     pthread_create(&pthreadId1, NULL, HandlePthread1, (void *)this);
     pthread_create(&pthreadId2, NULL, HandlePthread2, (void *)this);
@@ -57,7 +57,8 @@ void MultiPthread::RunPthread()
     pthread_join(pthreadId3, &rst);
     pthread_join(pthreadId4, &rst);
     long long endTime = GetNowMs();
-    totalTime = endTime - startTime;
+
+    cout <<"total time: "<< endTime - startTime<<" ms"<<endl;
 }
 
 void MultiPthread::PrintShow()
@@ -66,115 +67,88 @@ void MultiPthread::PrintShow()
     cout << "q = " << q <<endl;
     cout << "r = " << r <<endl;
     cout << "s = " << s <<endl;
-    //cout << "Caculation Take " <<  totalTime << " ms" << endl;
 }
 
 
-void MultiPthread::ThreadHandle(int threadId, void *arg)
-{
-    MultiPthread *pThread = (MultiPthread *)arg;
-    int64_t count = pThread->maxNum;
 
-    switch (threadId) {
-        case 1:
-            {
-                while (count--) {
-                    pThread->HandlePthread1();
-                }
-                return;
-            }
-        case 2:
-            {
-                while (count--) {
-                    pThread->HandlePthread2();
-                }
-                return;
-            }
-        case 3:
-            {
-                while (count--) {
-                    pThread->HandlePthread3();
-                }
-                return;
-            }
-        case 4:
-            {
-                while (count--) {
-                    pThread->HandlePthread4();
-                }
-                return;
-            }
-        default:
-            cerr<<"unkown threadId" << threadId <<endl;
+
+void *MultiPthread::HandlePthread1(void *argc)
+{
+    MultiPthread *p = (MultiPthread *)argc;
+    p->DoThread1();
+    return NULL;
+}
+
+void *MultiPthread::HandlePthread2(void *argc)
+{
+    MultiPthread *p = (MultiPthread *)argc;
+    p->DoThread2();
+    return NULL;
+}
+
+void *MultiPthread::HandlePthread3(void *argc)
+{
+    MultiPthread *p = (MultiPthread *)argc;
+    p->DoThread3();
+    return NULL;
+}
+
+void *MultiPthread::HandlePthread4(void *argc)
+{
+    MultiPthread *p = (MultiPthread *)argc;
+    p->DoThread4();
+    return NULL;
+}
+
+void MultiPthread::DoThread1()
+{
+    int64_t total = maxNum;
+    while (total--> 0) {
+        pthread_mutex_lock(&pThreadMutex);
+        ++p;
+        ++q;
+        ++r;
+        ++s;
+        pthread_mutex_unlock(&pThreadMutex);
+    }
+}
+
+void MultiPthread::DoThread2()
+{
+    int64_t total = maxNum;
+    while (total--> 0) {
+        pthread_mutex_lock(&pThreadMutex);
+        ++p;
+        ++q;
+        ++s;
+        pthread_mutex_unlock(&pThreadMutex);
+    }
+}
+
+void MultiPthread::DoThread3()
+{
+    int64_t total = maxNum;
+    while (total--> 0) {
+        pthread_mutex_lock(&pThreadMutex);
+        ++p;
+        ++r;
+        ++s;
+        pthread_mutex_unlock(&pThreadMutex);
+    }
+}
+
+void MultiPthread::DoThread4()
+{
+    int64_t total = maxNum;
+    while (total--> 0) {
+        pthread_mutex_lock(&pThreadMutex);
+        ++q;
+        ++s;
+        pthread_mutex_unlock(&pThreadMutex);
     }
 }
 
 
-void MultiPthread::HandlePthread1(void)
-{
-    IncreaseP();
-    IncreaseQ();
-    IncreaseR();
-    IncreaseS();
-}
-
-void MultiPthread::HandlePthread2(void)
-{
-    IncreaseP();
-    IncreaseQ();
-    IncreaseS();
-}
-
-void MultiPthread::HandlePthread3(void)
-{
-    IncreaseP();
-    IncreaseR();
-    IncreaseS();
-}
-
-void MultiPthread::HandlePthread4(void)
-{
-    IncreaseQ();
-    IncreaseS();
-}
-
-void MultiPthread::IncreaseP()
-{
-    pthread_mutex_lock(&pThreadMutexP);
-    ++p;
-    pthread_mutex_unlock(&pThreadMutexP);
-}
-
-void MultiPthread::IncreaseQ()
-{
-    pthread_mutex_lock(&pThreadMutexQ);
-    ++q;
-    pthread_mutex_unlock(&pThreadMutexQ);
-}
-
-void MultiPthread::IncreaseR()
-{
-    pthread_mutex_lock(&pThreadMutexR);
-    ++r;
-    pthread_mutex_unlock(&pThreadMutexR);
-}
-
-void MultiPthread::IncreaseS()
-{
-    pthread_mutex_lock(&pThreadMutexS);
-    ++s;
-    pthread_mutex_unlock(&pThreadMutexS);
-}
-
-long long MultiPthread::GetCaculateTime()
-{
-    return totalTime;
-}
-
 MultiPthread::~MultiPthread()
 {
-    pthread_mutex_destroy(&pThreadMutexP);
-    pthread_mutex_destroy(&pThreadMutexQ);
-    pthread_mutex_destroy(&pThreadMutexR);
-    pthread_mutex_destroy(&pThreadMutexS);
 }

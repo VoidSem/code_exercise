@@ -6,11 +6,11 @@
 #define var
 
 CC = gcc
-TARGET = TestDemo
+TARGET = ScanDemo
 CFLAGS =
 
 #files
-objects = TestDemo.o ScanDir.o
+objects = $(TARGET).o ScanDir.o
 headers = ScanDir.h
 
 #rules

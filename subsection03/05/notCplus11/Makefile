@@ -3,11 +3,8 @@
 #
 #
 
-#define var
-CC=gcc
 CXX=g++
-TARGET=TestPthreadDemo
-#CXXFLAGS = -std=c++11
+TARGET=PthreadDemo
 CXXFLAGS = -pthread
 
 #files

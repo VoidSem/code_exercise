@@ -1,8 +1,9 @@
 /*
- * name: MultiPthread.h
+ * Name:        MultiPthread.cpp
  * Description: multi Thread access members(C++11)
- * author:liuxueneng@airfly
- * date:20190418
+ * Author:      liuxueneng@iairfly
+ * Date:        20190418
+ * Modify:      20190423
  */
 
 #include "MultiThread.h"
@@ -18,7 +19,6 @@ MultiThread::MultiThread(int64_t num)
     r = 0;
     s = 0;
     maxNum = num;
-    totalTime = 0;
 }
 
 /* get now time us */
@@ -31,131 +31,66 @@ long long MultiThread::GetNowMs()
     return now.tv_sec * 1000 + now.tv_usec / 1000;
 }
 
+/*out put*/
 void MultiThread::PrintShow()
 {
     cout << "p = " << p <<endl;
     cout << "q = " << q <<endl;
     cout << "r = " << r <<endl;
     cout << "s = " << s <<endl;
-    //cout << "Caculation Take " <<  totalTime << " ms" << endl;
 }
 
+void MultiThread::HandleIncrease(unsigned char mode)
+{
+    int64_t total = maxNum;
+
+    while (total--) {
+        if (mode & 0x1) {
+            ++p;
+        }
+        if (mode & (0x1 << 1)) {
+            ++q;
+        }
+        if (mode & (0x1 << 2)) {
+            ++r;
+        }
+        if (mode & (0x1 << 3)) {
+            ++s;
+        }
+    }
+}
+
+/*create thread and run*/
 void MultiThread::RunThread()
 {
-    void *rst = NULL;
+    int tNum = 4;
+    unsigned char mode[tNum] = {
+        0x1 | 0x1 << 1 | 0x1 << 2 | 0x1 << 3,
+        0x1 | 0x1 << 1 | 0x1 << 3,
+        0x1 | 0x1 << 2 | 0x1 << 3,
+        0x1 << 1 | 0x1 << 3};
+
     long long startTime = GetNowMs();
-
     /* creat new thread */
-    for (int i = 1; i < 5; ++i)
+    for (int i = 0; i < tNum; ++i)
     {
-        threads.push_back(thread(bind(ThreadHandle, i, (void *)this)));
+        threads.push_back(thread(bind(ThreadHandle, mode[i], (void *)this)));
     }
-
-    // lambda
-    for_each(threads.begin(), threads.end(), [](thread &t){ t.join();});
 
     //wait for thread finish
-    //
+    for_each(threads.begin(), threads.end(), [](thread &t){ t.join();});
+
     long long endTime = GetNowMs();
-    totalTime = endTime - startTime;
+    cout <<"totalTime "<<endTime - startTime<<" ms"<<endl;
 }
 
-
-void MultiThread::ThreadHandle(int threadId, void *arg)
+void MultiThread::ThreadHandle(unsigned char mode, void *arg)
 {
-    MultiThread *pThread = (MultiThread *)arg;
-    int64_t count = pThread->maxNum;
-
-    switch (threadId) {
-        case 1:
-            {
-                while (count--) {
-                    pThread->HandleThread1();
-                }
-                return;
-            }
-        case 2:
-            {
-                while (count--) {
-                    pThread->HandleThread2();
-                }
-                return;
-            }
-        case 3:
-            {
-                while (count--) {
-                    pThread->HandleThread3();
-                }
-                return;
-            }
-        case 4:
-            {
-                while (count--) {
-                    pThread->HandleThread4();
-                }
-                return;
-            }
-        default:
-            cerr<<"unkown threadId" << threadId <<endl;
-    }
+    MultiThread *p = (MultiThread *)arg;
+    p->HandleIncrease(mode);
 }
 
-
-void MultiThread::HandleThread1(void)
-{
-    IncreaseP();
-    IncreaseQ();
-    IncreaseR();
-    IncreaseS();
-}
-
-void MultiThread::HandleThread2(void)
-{
-    IncreaseP();
-    IncreaseQ();
-    IncreaseS();
-}
-
-void MultiThread::HandleThread3(void)
-{
-    IncreaseP();
-    IncreaseR();
-    IncreaseS();
-}
-
-void MultiThread::HandleThread4(void)
-{
-    IncreaseQ();
-    IncreaseS();
-}
-
-void MultiThread::IncreaseP()
-{
-    ++p;
-}
-
-void MultiThread::IncreaseQ()
-{
-    ++q;
-}
-
-void MultiThread::IncreaseR()
-{
-    ++r;
-}
-
-void MultiThread::IncreaseS()
-{
-    ++s;
-}
-
-long long MultiThread::GetCaculateTime()
-{
-    return totalTime;
-}
 
 MultiThread::~MultiThread()
 {
-    // lambda
-    //    for_each(threads.begin(), threads.end(), [](thread &t){ t.join();});
 }

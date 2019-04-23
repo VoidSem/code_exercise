@@ -1,34 +1,24 @@
 /*
- * file:        TestIpcMsg.c
- * func:        system msg ipc
- * author:      liuxueneng@airfly
- * date:        20190417
- *
+ * Name:        TestIpcMsg.c
+ * Description: System msg ipc
+ * Author:      liuxueneng@airfly
+ * Date:        20190417
+ * Modify:      20190423
  */
 
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h> 
+#include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <wait.h>
 #include <errno.h>
 
-#if 0
-
-struct msgbuf {
-    long mtype;       /* message type, must be > 0 */
-    char mtext[1];    /* message data */
-};
-
-#endif
-
 #define         IPC_KEY         (0x66)
-#define         IPC_PATH        "/tmp"
+#define         IPC_PATH        ("/tmp")
 #define         BUF_SIZE        (128)
-
 #define         FATHER_TYPE        (0x88)
 #define         CHILD_TYPE         (0x99)
 
@@ -37,40 +27,22 @@ typedef struct ipcMsg_s {
     char buf[BUF_SIZE];
 }ipcMsg_t;
 
-#if 0
-static int CheckFile(const char *file)
-{
-    if(NULL == file)
-        return -1;
-
-    if(0 == access(file, F_OK))
-        return -2;
-
-    int fd = open(file, O_CREATE | O_RDWR);
-    if (fd < 0) {
-        return -3;
-    }
-    close(fd);
-
-    return 0;
-}
-#endif
 
 static void SendAndRecv(int msgId)
 {
     ipcMsg_t tmpMsg;
     tmpMsg.type = FATHER_TYPE;
 
-        snprintf(tmpMsg.buf, BUF_SIZE, "%s","Hello, My boy");
-        if (msgsnd(msgId,&tmpMsg,BUF_SIZE,0) < 0) {
-            printf("msgsnd failed\n");
-        }
-        if (msgrcv(msgId,&tmpMsg,BUF_SIZE,CHILD_TYPE,0) < 0) {
-            printf("msgrcv failed \n");
-        }
-        else {
-            printf("parent success\n");
-        }
+    snprintf(tmpMsg.buf, BUF_SIZE, "%s","Hello, My boy");
+    if (msgsnd(msgId,&tmpMsg,BUF_SIZE,0) < 0) {
+        printf("msgsnd failed\n");
+    }
+    if (msgrcv(msgId,&tmpMsg,BUF_SIZE,CHILD_TYPE,0) < 0) {
+        printf("msgrcv failed \n");
+    }
+    else {
+        printf("parent success\n");
+    }
 }
 
 static void RecvAndSend(int msgId)
@@ -120,7 +92,7 @@ int main()
         waitpid(pid,NULL,0);
     }
     else if (0 == pid) {
-        //this is child 
+        //this is child
         RecvAndSend(msgId);
         msgctl(msgId,IPC_RMID,NULL);
 

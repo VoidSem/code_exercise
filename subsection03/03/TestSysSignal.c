@@ -1,9 +1,9 @@
 /*
- * file:        TestSysSignal.c
- * func:        system signal handler
- * author:      liuxueneng@airfly
- * date:        20190417
- *
+ * Name:        TestSysSignal.c
+ * Descriptor:  system signal test
+ * Author:      liuxueneng@iairfly
+ * Date:        20190417
+ * Modify:      20190423
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +11,6 @@
 #include <signal.h>
 #include <time.h>
 #include <sys/time.h>
-
 
 void SignalHandler(int signo)
 {
@@ -29,7 +28,6 @@ void SignalHandler(int signo)
             }
     }
 }
-
 
 int main(void)
 {
@@ -55,9 +53,13 @@ int main(void)
     itv.it_value.tv_sec = 1;
     itv.it_value.tv_usec = 0;
 
+    /*init timer*/
     setitimer(ITIMER_REAL, &itv, &oldTv);
 
-    for ( ; ; );
+    for ( ; ; ) {
+        //this will return when get catch a signal
+        pause();
+    }
 
     return 0;
 }

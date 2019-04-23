@@ -1,9 +1,9 @@
 /*
- * name: MultiPthread.h
+ * Name:        MultiPthread.h
  * Description: multi pthread access members
- * author:liuxueneng@airfly
- * date:20190418
- *
+ * Author:      liuxueneng@iairfly
+ * Date:        20190418
+ * Modify:      20190423
  */
 
 #ifndef MULTI_PTHREAD_H
@@ -21,20 +21,18 @@ class MultiPthread
         void PrintShow();
 
         /*increase val*/
-        void IncreaseP();
-        void IncreaseQ();
-        void IncreaseR();
-        void IncreaseS();
-
-        long long GetCaculateTime();
+        void DoThread1();
+        void DoThread2();
+        void DoThread3();
+        void DoThread4();
 
         static long long GetNowMs();
+
         /* pthread handlers */
         static void* HandlePthread1(void *arg);
         static void* HandlePthread2(void *arg);
         static void* HandlePthread3(void *arg);
         static void* HandlePthread4(void *arg);
-
 
         virtual ~MultiPthread();
 
@@ -47,22 +45,9 @@ class MultiPthread
         int64_t r;
         int64_t s;
 
-        /**/
         int64_t maxNum;
-        /* caculate time */
-        long long totalTime;
-
-        /* phtread id */
-        pthread_t pthreadId1;
-        pthread_t pthreadId2;
-        pthread_t pthreadId3;
-        pthread_t pthreadId4;
-
         /* mutexs */
-        pthread_mutex_t pThreadMutexP;
-        pthread_mutex_t pThreadMutexQ;
-        pthread_mutex_t pThreadMutexR;
-        pthread_mutex_t pThreadMutexS;
+        pthread_mutex_t pThreadMutex;
 
 };
 

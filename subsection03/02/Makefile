@@ -6,12 +6,12 @@
 #define var
 
 CC = gcc
-TARGET = TestGetTime
+TARGET = GetTime
 CFLAGS =
 
 #files
-objects = TestGetTime.o GetTime.o
-headers = GetTime.h
+objects = $(TARGET).o
+headers =
 
 #rules
 $(TARGET): $(objects)

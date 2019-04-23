@@ -1,8 +1,9 @@
 /*
- * Name: Client.h
+ * Name:        Client.h
  * Description: client headers
- * Author: liuxueneng@iairfly
- * Date: 20190419
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      20190423
  */
 
 #ifndef CLIENT_H
@@ -11,28 +12,24 @@
 #include "Common.h"
 
 class Client {
-public:
-    Client(int SERVER_PORT, const char *SERVER_IP);
-    /*create socket*/
-    int Init();
-    /*connet to the server*/
-    int Connect();
-    /*close the socket*/
-    void Close();
+    public:
+        Client(int port, const char *ip);
+        /*create socket and connect to server*/
+        int Init();
 
-    /*send msg to the server*/
-    int SendMsg(const socketMsg_t *msg);
+        /*send msg to the server*/
+        int SendMsg(const char *buf, size_t len, int mode);
 
-    /*recv msg from the server*/
-    int RecvMsg(socketMsg_t *msg);
+        /*recv msg from the server*/
+        int RecvMsg(char *buf, size_t len, int mode);
 
-private:
+        virtual ~Client();
 
-    /*socket fd*/
-    int sockFd;
-    /*epoll fd*/
-    int epFd;
-    /*socket server addr*/
-    struct sockaddr_in serverAddr;
+    private:
+        /*socket fd*/
+        int sockFd;
+
+        /*socket server addr*/
+        struct sockaddr_in serverAddr;
 };
 #endif /* CLIENT_H*/

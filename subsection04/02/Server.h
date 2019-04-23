@@ -1,8 +1,9 @@
 /*
- * Name: Server.h
+ * Name:        Server.h
  * Description: Server header
- * Author:liuxueneng@iairfly
- * Date:20190419
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      2190423
  */
 
 #ifndef SERVER_H
@@ -12,16 +13,14 @@
 
 class Server {
     public:
-        Server(int SERVER_PORT, const char *SERVER_IP, int  backLog);
+        Server(int port, const char *ip, int  backLog);
         /*create socket and bind it*/
         int Init();
 
         /*start monitor accept event and clients events*/
         int Start();
 
-        /*close socket and epoll*/
-        void Close();
-
+        virtual ~Server();
     private:
         /*handle accept events*/
         int AcceptHandle();
@@ -30,7 +29,7 @@ class Server {
         int ClientHandle(int fd);
 
         /*when the client is wrong do this*/
-        int DeleteClient(int fd);
+        void DeleteClient(int fd);
 
         struct sockaddr_in serverAddr;
 
@@ -42,8 +41,5 @@ class Server {
 
         /*epoll*/
         int epFd;
-
-        /*save the clients*/
-        std::list<int> clientList;
 };
 #endif /* SERVER_H*/

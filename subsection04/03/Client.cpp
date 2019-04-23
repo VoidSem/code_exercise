@@ -1,11 +1,10 @@
 /*
- * name:Client.cpp
+ * Name:        Client.cpp
  * Description: sock communicate test client
- * Author:liuxueneng@iairfly
- * Date:20190419
- *
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      20190423
  */
-
 
 #include "Client.h"
 
@@ -17,24 +16,15 @@ Client::Client(int port, const char *ip)
     serverAddr.sin_port = htons(port);
     serverAddr.sin_addr.s_addr = inet_addr(ip);
     sockFd = 0;
-    epFd = 0;
 }
 
+
+/*create socket and connet to server*/
 int Client::Init()
 {
     sockFd = socket(PF_INET, SOCK_STREAM, 0);
     if(sockFd < 0) {
         perror("sock error");
-        return -1;
-    }
-    return sockFd;
-}
-
-//connect server
-int Client::Connect()
-{
-    if (0 == sockFd) {
-        cerr<<"Please init  first"<<endl;
         return -1;
     }
 
@@ -46,17 +36,20 @@ int Client::Connect()
     return 0;
 }
 
-void Client::Close()
+
+Client::~Client()
 {
-    close(sockFd);
+    if (sockFd > 0) {
+        close(sockFd);
+    }
 }
 
-int Client::SendMsg(const socketMsg_t *msg)
+int Client::SendMsg(const char *buf, size_t len, int mode)
 {
-    return CommonSendMsg(sockFd, msg, 0);
+    return send(sockFd, buf, len, mode);
 }
 
-int Client::RecvMsg(socketMsg_t *msg)
+int Client::RecvMsg(char *buf, size_t len, int mode)
 {
-    return CommonRecvMsg(sockFd, msg, 0);
+    return recv(sockFd, buf, len, mode);
 }

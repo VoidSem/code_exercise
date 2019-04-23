@@ -1,11 +1,10 @@
 /*
- * name: GetNetworkInfo.c
- * Description:
- * author: liuxueneng@airfly
- * date: 20190419
- *
+ * Name:        GetNetworkInfo.c
+ * Description: get system ip hwAddr
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      20190423
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,210 +15,82 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <ifaddrs.h>
 #include <string.h>
+#include <netdb.h>
+#include <sys/param.h>
+#include <net/if.h>
+#include <netinet/in.h>
 
+#define MAX_INTERFACE 8
 
-#define		RUNNING_STR		("UP BROADCAST RUNNING")
-#define		HW_ADDR			("HWaddr ")
-#define		INET_ADDR		("inet addr:")
-#define         BCAST_ADDR              ("Bcast:")
-#define         ADDR_MASK               ("Mask:")
-#define		ADDR_LEN		(32)
-#define         MAX_CARD_NUM            (8)
-
-typedef	struct netCard_s {
-    char macAddr[ADDR_LEN];
-    char inetAddr[ADDR_LEN];
-    char bcastAddr[ADDR_LEN];
-    char addrMask[ADDR_LEN];
-}netCard_t;
-
-int GetNetInfo(char *buffer, int bufSize);
-
-/*Get running card*/
-static int GetRunningCards(const char *cardName, char *buffer);
-
-/*parse item infomation*/
-static int GetItem(const char *buf, const char *key,
-        int len, char c, char *str);
-
-/*get card infomation*/
-int GetCardInfo(const char *buffer, netCard_t *netCard);
-
-
-int main(int argc, char **argv)
+int  main(int argc, char **argv)
 {
-    char card[MAX_CARD_NUM][ADDR_LEN] = {};
-    char netInfo[BUFSIZ] = {};
-    netCard_t netCard = {};
-    int ret = -1;
-
-    if (GetNetInfo(netInfo, BUFSIZ) < 0) {
-        printf("get netinfo failed\n");
+    int fd = 0;
+    if ((fd = socket (AF_INET, SOCK_DGRAM, 0)) < 0){
+        perror("socket error");
         return -1;
     }
 
-    char *p = strchr(netInfo, '\n');
-    char *pStart = netInfo;
-    int cardNum = 0;
-    while (p = strchr(pStart, '\n')) {
-        memcpy(card[cardNum], pStart, (p - pStart));
-        ++cardNum;
-        pStart = ++p;
-    }
-
-    int i = 0;
-    for (i = 0; i < cardNum; ++i) {
-        if(GetRunningCards(card[i], netInfo) == 0 ) {
-            break;
-        }
-        else
-        {
-            ret = -2;
-            goto ERROR;
-        }
-    }
-
-    if (GetCardInfo(netInfo, &netCard) > 0) {
-        printf("card: %s\nmacAddr: %s\n", card[i], netCard.macAddr);
-        printf("inet_addr: %s\nbcastAddr: %s\naddrMask: %s\n",
-                netCard.inetAddr, netCard.bcastAddr, netCard.addrMask);
-    }
-    else
-    {
-        ret = -3;
-        goto ERROR;
-    }
-
-    return 0;
-ERROR:
-    printf("get network infomation failed:%d\n",ret);
-    return ret;
-}
-
-/*Get system Network Cards*/
-int GetNetInfo(char *buffer, int bufSize)
-{
-    char  cmd[128];
-    FILE  *fp;
-    int    readByte;
-    int    ret =0;
-
-    memset( buffer, 0, BUFSIZ );
-    memset( cmd, 0, 100 );
-    sprintf(cmd, "ifconfig | grep -v -i \"LoopBack\""
-            "| grep \"HWaddr\" | awk '{print $1}'");
-
-    fp = popen(cmd, "r");
-    if (NULL == fp){
-        printf("popen:%s failed\n", cmd);
-        return -1;
-    }
-    readByte = fread(buffer, 1, bufSize - 1, fp);
-    pclose(fp);
-    if (readByte <= 0) {
-        fprintf(stderr, "%s: NO FOUND\r\n",cmd);
+    struct ifreq buf[MAX_INTERFACE];
+    struct ifconf ifc;
+    ifc.ifc_len = sizeof(buf);
+    ifc.ifc_buf = (caddr_t)buf;
+    if (ioctl(fd, SIOCGIFCONF, (char *)&ifc) < 0) {
+        perror("ioctl error");
+        close(fd);
         return -2;
     }
+    //printf("interface num %d\n",nets);
+    int nets = ifc.ifc_len / sizeof (struct ifreq);
+    while ((nets--) > 0) {
+        //loop back ignore
+        if(0 == strcmp(buf[nets].ifr_name, "lo")) {
+            continue;
+        }
+
+        if ((ioctl(fd, SIOCGIFFLAGS, (char *) &buf[nets]))){
+            continue;
+        }
+
+        if (!(buf[nets].ifr_flags & IFF_UP)) {
+            //if down  ignore
+            printf("the interface status is DOWN\n");
+            continue;
+        }
+
+        printf ("\nName:\n[%s]\n", buf[nets].ifr_name);
+        if ( (ioctl(fd, SIOCGIFADDR, (char *) &buf[nets])))
+        {
+            continue;
+        }
+        printf("\nIp:\n[%s]\n",
+                (char *)inet_ntoa(((struct sockaddr_in*)(&buf[nets].ifr_addr))->sin_addr));
+
+        if (!(ioctl(fd, SIOCGIFHWADDR, (char *) &buf[nets]))) {
+            printf("\nMacAddr:\n[%02x:%02x:%02x:%02x:%02x:%02x]\n",
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[0],
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[1],
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[2],
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[3],
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[4],
+                    (unsigned char)buf[nets].ifr_hwaddr.sa_data[5]);
+        }
+
+        if ( (ioctl(fd, SIOCGIFNETMASK, (char *) &buf[nets]))) {
+            continue;
+        }
+        printf("\nAddrMask:\n[%s]\n",
+                (char*)inet_ntoa(((struct sockaddr_in*) (&buf[nets].ifr_addr))->sin_addr));
+
+        if ( (ioctl(fd, SIOCGIFBRDADDR, (char *) &buf[nets]))) {
+            continue;
+        }
+        printf("\nBroadcastAddr:\n[%s]\n",
+                (char*)inet_ntoa(((struct sockaddr_in*) (&buf[nets].ifr_addr))->sin_addr));
+    }
+
+    close(fd);
+
     return 0;
 }
-
-
-/*Get running card*/
-static int GetRunningCards(const char *cardName, char *buffer)
-{
-    //char  buffer[BUFSIZ];
-    char  cmd[100];
-    FILE  *fp;
-    int    readByte;
-
-    sprintf(cmd, "ifconfig %s", cardName);
-    fp = popen(cmd, "r");
-    if (NULL == fp){
-        printf("popen:%s failed\n", cmd);
-        return -1;
-    }
-    readByte = fread(buffer, 1, BUFSIZ-1, fp);
-    pclose(fp);
-    if (readByte > 0 && strstr(buffer, RUNNING_STR)) {
-        //printf("%s:Link\n", cardName);
-        return 0;
-    }
-    return -1;
-}
-
-/*card infomation item parse*/
-static int GetItem(const char *buf, const char *key, int len, char c, char *str)
-{
-    char *p = strstr(buf, key);
-    int keyLen = strlen(key);
-
-    if(NULL == p) {
-        printf("%s get %s from %s failed\n",__func__, key, buf);
-        return -1;
-    }
-
-    memcpy(str, p+keyLen, len);
-    p = strchr(str+keyLen, c);
-    if (NULL == p) {
-        printf("%s get %s from %s find no:[%c]\n",__func__, key, buf, c);
-    }
-    else {
-        *p = '\0';
-    }
-
-    return 0;
-}
-
-
-/*get running card infomation*/
-int GetCardInfo(const char *buffer, netCard_t *netCard)
-{
-    if (NULL == buffer || NULL == netCard) {
-        return -1;
-    }
-
-    //get hw addr
-    const char *key = HW_ADDR;
-    int len = ADDR_LEN;
-    char endChar = '\n';
-    char *str = netCard->macAddr;
-    int ret = 0;
-    int count = 0;
-    ret = GetItem(buffer, key, len, endChar, str);
-    if ( ret < 0) {
-        printf("%s get %s failed\n",__func__, key);
-    }
-    ++count;
-
-    //get inet addr
-    key = INET_ADDR;
-    endChar = ' ';
-    str = netCard->inetAddr;
-    ret = GetItem(buffer, key, len, endChar, str);
-    if ( ret < 0) {
-        printf("%s get %s failed\n",__func__, key);
-    }
-    ++count;
-
-    //get bcast addr
-    key = BCAST_ADDR;
-    str = netCard->bcastAddr;
-    ret = GetItem(buffer, key, len, endChar, str);
-    if ( ret < 0) {
-        printf("%s get %s failed\n",__func__, key);
-    }
-    ++count;
-
-    //get addr mask
-    key = ADDR_MASK;
-    str = netCard->addrMask;
-    ret = GetItem(buffer, key, len, endChar, str);
-    if ( ret < 0) {
-        printf("%s get %s failed\n",__func__, key);
-    }
-    ++count;
-
-    return count;
-}
-

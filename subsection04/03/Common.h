@@ -1,30 +1,25 @@
 /*
- * Name: Common.h
+ * Name:        Common.h
  * Description: include  server and client
- * Author: liuxueneng@iairfly
- * Date: 20190419
- *
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      20190423
  */
+
 #ifndef COMMON_H
 #define COMMON_H
 
 #include <iostream>
 #include <list>
-#include <string>
-#include <vector>
-#include <thread>
 
-#define         EPOLL_SIZE              (65535)
 #define         COMMON_SERVER_PORT      (8000)
-#define         COMMON_BACK_LOG      	(1 << 15)
+#define         COMMON_BACK_LOG      	(1024)
 #define         COMMON_SERVER_IP        ("127.0.0.1")
+#define         EPOLL_SIZE              (65535)
 
-#define         CLIENT_WAIT_SEC         (10)
-#define         SEND_SERVER_STRING      ("ping")
-#define         SEND_CLIENT_STRING      ("pong")
-#define         COMMON_EXIT_STRING      ("ExitRightNow!")
+#define         SEND_STRING_PING        ("ping")
+#define         SEND_STRING_PONG        ("pong")
 
-#define         MAX_CLIENT_PER_THREAD    (250)
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,38 +38,9 @@ extern "C" {
 #include <poll.h>
 #include <sys/epoll.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
-
-    typedef struct socketMsg_s {
-        unsigned long size;
-        char *data;
-    } socketMsg_t;
-
-
-    /*add new fd to the epoll events*/
-    static void AddEpollFd(int epFd, int fd, bool enable_et)
-    {
-        struct epoll_event ev;
-        ev.data.fd = fd;
-        ev.events = EPOLLIN | EPOLLERR | EPOLLRDHUP | EPOLLHUP;
-        epoll_ctl(epFd, EPOLL_CTL_ADD, fd, &ev);
-        //fcntl(fd, F_SETFL, fcntl(fd, F_GETFD, 0)| O_NONBLOCK);
-    }
-
-    /*for send msg*/
-    static inline int CommonSendMsg(int fd, const socketMsg_t *msg, int mode)
-    {
-        return send(fd, msg->data,msg->size, mode);
-    }
-
-    /*for receive msg*/
-    static inline int CommonRecvMsg(int fd, socketMsg_t *msg, int mode)
-    {
-        int ret = recv(fd, msg->data, msg->size, mode);
-        msg->size = ret;
-        return ret;
-    }
 
 #ifdef __cplusplus
 }

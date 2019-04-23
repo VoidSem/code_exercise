@@ -1,9 +1,9 @@
 /*
- * name:Server.cpp
+ * Name:        Server.cpp
  * Description: sock communicate test server
- * author:liuxueneng@iairfly
- * date:20190419
- *
+ * Author:      liuxueneng@iairfly
+ * Date:        20190419
+ * Modify:      20190423
  */
 
 #include "Server.h"
@@ -18,7 +18,6 @@ Server::Server(int port, const char *ip, int backLog)
     serverAddr.sin_addr.s_addr = inet_addr(ip);
     this->backLog = backLog;
     socketFd = 0;
-    // epool fd
     epFd = 0;
 }
 
@@ -40,31 +39,28 @@ int Server::Init()
         return -2;
     }
 
-    ret = listen(socketFd, backLog);
-    if(ret < 0) {
+    if(ret < listen(socketFd, backLog)) {
         perror("listen error");
         return -3;
     }
 
-    epFd = epoll_create (EPOLL_SIZE);
+    epFd = epoll_create(EPOLL_SIZE);
     if(epFd < 0) {
         perror("epFd error");
         return -4;
     }
-    //往事件表里添加监听事件
-    AddEpollFd(epFd, socketFd, true);
+
+    //add fd to epoll
+    struct epoll_event ev;
+    ev.data.fd = socketFd;
+    ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
+    epoll_ctl(epFd, EPOLL_CTL_ADD, socketFd, &ev);
+
+    return 0;
 }
 
-void Server::Close()
+Server::~Server()
 {
-    list<int>::iterator iter;
-
-    for(iter = clientList.begin(); iter != clientList.end();/*nothing*/) {
-        epoll_ctl(epFd, EPOLL_CTL_DEL, *iter, NULL);
-        close(*iter);
-        iter = clientList.erase(iter);
-    }
-
     if (epFd > 0) {
         close(epFd);
     }
@@ -79,50 +75,45 @@ int Server::AcceptHandle()
 {
     struct sockaddr_in client_address;
     socklen_t len = 0;
+
     int clientFd = accept(socketFd, ( struct sockaddr* )&client_address, &len);
     if (clientFd < 0) {
         return -1;
     }
 
-    AddEpollFd(epFd, clientFd, true);
-    clientList.push_back(clientFd);
-    //cout <<"Add "<< clientFd <<endl;
+    //add fd to epoll
+    struct epoll_event ev;
+    ev.data.fd = clientFd;
+    ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
+    epoll_ctl(epFd, EPOLL_CTL_ADD, clientFd, &ev);
+
+#ifdef  TEST_DEBUG
+    static int c = 0;
+    cout <<"Add "<< ++c<<endl;
+#endif
     return 0;
 }
 
-int Server::DeleteClient(int fd)
+void Server::DeleteClient(int fd)
 {
     epoll_ctl(epFd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
-    clientList.remove(fd);
-    return 0;
 }
 
 int Server::ClientHandle(int fd) {
     char buf[BUFSIZ] = {};
-    socketMsg_t msg = {};
-    msg.size = BUFSIZ;
-    msg.data = buf;
 
     //cout <<"handle "<< fd <<endl;
-    int ret = CommonRecvMsg(fd, &msg);
+    int ret = recv(fd, buf, BUFSIZ, 0);
     if (ret < 0) {
         DeleteClient(fd);
         return -1;
     }
 
-    cout<< msg.data <<endl;
+    cout<< buf<<endl;
+    int len = strlen(SEND_STRING_PONG) + 1;
 
-    if (0 == strcmp(msg.data, COMMON_EXIT_STRING)) {
-        cout <<"get exit string" <<endl;
-        return 1;
-    }
-
-    sprintf(msg.data, SEND_CLIENT_STRING);
-    int len = strlen(msg.data) + 1;
-    msg.size = (unsigned int)len;
-
-    ret = CommonSendMsg(fd, &msg);
+    ret = send(fd, SEND_STRING_PONG, len, 0);
     if (ret < len) {
         DeleteClient(fd);
         return -1;
@@ -134,53 +125,36 @@ int Server::ClientHandle(int fd) {
 int Server::Start()
 {
     struct epoll_event epEvents[EPOLL_SIZE] = {};
-    if (!(socketFd  > 0 && socketFd > 0)) {
-        cerr<<"Please Init it first!"<<endl;
-        return -1;
-    }
+    int timeOut = -1;
     cout<<"start epoll wait..."<<endl;
     while (1)
     {
         //blocked
-        int timeOut = -1;
         int eventNum = epoll_wait(epFd, epEvents, EPOLL_SIZE, timeOut);
-
         if(eventNum < 0) {
             perror("epoll failure");
-            break;
+            return -1;
         }
 
-        //cout << "eventNum =\n" << eventNum << endl;
         //handle epEvents
         for(int i = 0; i < eventNum; ++i) {
             int tmpFd = epEvents[i].data.fd;
             if ((epEvents[i].events & EPOLLERR) || (epEvents[i].events & EPOLLRDHUP)) {
+                DeleteClient(tmpFd);
                 if(tmpFd == socketFd) {
-                    cerr << "socket wrong" <<endl;
-                    epoll_ctl(epFd, EPOLL_CTL_DEL, tmpFd, NULL);
                     return -1;
-                }
-                else {
-                    DeleteClient(tmpFd);
-                    //cout <<"Delete "<< tmpFd <<endl;
-                    continue;
                 }
             }
             else if (epEvents[i].events & EPOLLIN) {
                 if(tmpFd == socketFd) {//client connect
-                    int ret = AcceptHandle();
-                    if (ret < 0) {
+                    if (AcceptHandle() < 0) {
                         cerr<< strerror(errno)<<endl;
                         return -2;
                     }
                 }
                 else {  //client msg
-                    int ret = ClientHandle(tmpFd);
-                    if(ret < 0) {
+                    if(ClientHandle(tmpFd) < 0) {
                         cerr<< strerror(errno)<<endl;
-                    }
-                    else if(ret == 1) {
-                        return 0;
                     }
                 }
             }

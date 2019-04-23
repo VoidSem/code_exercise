@@ -1,9 +1,9 @@
 /*
- * file:        StringSort.h
- * func:        sort string
- * author:      liuxueneng@airFly
- * date:        20190417
- *
+ * Name:        StringSort.h
+ * Description:        sort string
+ * Author:      liuxueneng@airFly
+ * Date:        20190417
+ * Modify:      20190423
  */
 
 #ifndef STRING_SORT_H
@@ -16,11 +16,6 @@ extern "C" {
 #define DEFAULT_LINE    (128)
 #define MAX_NAME_LEN    (256)
 #define BUF_SIZE        (1024)
-
-    typedef enum sortOrder_e {
-        SORT_UP = 0x0A,
-        SORT_DOWN,
-    }sortOrder_t;
 
     typedef struct string_s {
         char            *str;
@@ -40,9 +35,6 @@ extern "C" {
 
     /*sort strings up*/
     void DoSortUp(const strInf_t *strInf);
-
-    /* sort strings down */
-    void DoSortDown(const strInf_t *strInf);
 
     /* traverse file string*/
     void OutShow(const strInf_t *strInf);

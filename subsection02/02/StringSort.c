@@ -1,9 +1,9 @@
 /*
- * file:        StringSort.c
- * func:        sort string
- * author:      liuxueneng@airFly
- * date:        20190417
- *
+ * Name:        StringSort.c
+ * Description: sort chinese string
+ * Author:      liuxueneng@airFly
+ * Date:        20190417
+ * Modify:      20190423
  */
 
 #include <stdio.h>
@@ -15,81 +15,13 @@
 
 #include "StringSort.h"
 
-#if 0
-typedef struct string_s{
-    char *str;
-    unsigned int len;
-}string_t;
-
-typedef struct stringInfo_s{
-    unsigned int num;
-    char name[MAX_NAME_LEN];
-    strint_t *strHead;
-    long fileSize;
-}strInf_t;
-#endif
-
-static char *GetMemory(long len)
+ /* cmp function */
+int CmpUpString(const void * strA, const void * strB)
 {
-    if(len <= 0)
-        return NULL;
-
-    //get memory space
-    char *tmp= (char *)malloc((size_t)len);
-
-
-    return tmp;
+    return strcoll(((string_t *)strA)->str, ((string_t *)strB)->str);
 }
 
-/*
- *
- */
-static int CmpString(string_t strA, string_t strB)
-{
-    return strcmp(strA.str, strB.str);
-}
-
-
-/*
- *
- * forbid recursion
- *
- */
-static void InsertSort(string_t *strHead, unsigned int strNum, sortOrder_t order)
-{
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    string_t *str  = strHead;
-    string_t tmpStr  = {};
-
-    if(NULL == str)
-        return;
-
-    //compare from the second element
-    for (i = 1; i < strNum; ++i) {
-        tmpStr = str[i];
-        k = i - 1;
-
-        while ((k >= 0) &&
-                ((SORT_UP == order && (CmpString(tmpStr, str[k]) < 0)) ||
-                 (SORT_DOWN == order && (CmpString(tmpStr, str[k]) > 0)))){
-            str[k + 1] = str[k];
-            --k;
-        }
-
-        str[k + 1] = tmpStr;
-    }
-
-}
-
-
-/*
- * func:
- * 1 read and save the file data.
- * 2 init  the string pointer point to the databuf.
- *
- */
+/* read and save the file data*/
 static int InitFileString(FILE *fp, strInf_t *strInf)
 {
     int readByte = 0;
@@ -168,15 +100,8 @@ ERROR:
 /*open and read sortFile*/
 int InitSort(const char *file, strInf_t *strInf)
 {
-
-    if (NULL == file || access(file, F_OK)) {
-        printf("parameters wrong exit\n");
-        goto ERROR;
-    }
-
     memset(strInf, 0, sizeof(strInf_t));
 
-    //save the file name
     snprintf(strInf->fileName, MAX_NAME_LEN, "%s", file);
     FILE *fp = fopen(file, "r+");
     if (fp == NULL) {
@@ -188,11 +113,7 @@ int InitSort(const char *file, strInf_t *strInf)
     fseek(fp, 0L, SEEK_END);
     long size = (long)ftell(fp);
 
-    if(size <= 0) {
-        goto ERROR1;
-    }
-
-    char *bufP = GetMemory(size);
+    char *bufP = (char *)malloc(size);
     if (NULL == bufP) {
         goto ERROR1;
     }
@@ -200,8 +121,6 @@ int InitSort(const char *file, strInf_t *strInf)
     //init usr data
     strInf->dataBuf = bufP;
     strInf->fileSize = size;
-
-    bufP = NULL;
 
     //attention  offset the fp
     rewind(fp);
@@ -223,26 +142,21 @@ ERROR:
     return -1;
 }
 
-/*sort strings up*/
-void DoSortUp(const strInf_t *strInf)
-{
-    InsertSort(strInf->strHead,strInf->strNum, SORT_UP);
-}
 
 /* sort strings down */
-void DoSortDown(const strInf_t *strInf)
+void DoSortUp(const strInf_t *strInf)
 {
-    InsertSort(strInf->strHead,strInf->strNum, SORT_DOWN);
+    qsort((void *)strInf->strHead, strInf->strNum,
+            (sizeof(string_t)),CmpUpString);
 }
 
 /* traverse file string*/
 void OutShow(const strInf_t *strInf)
 {
-    int i = 0;
-
     if (NULL == strInf)
         return;
 
+    int i = 0;
     for (i = 0; i < strInf->strNum; ++i) {
         printf("%s", (strInf->strHead +i)->str);
     }

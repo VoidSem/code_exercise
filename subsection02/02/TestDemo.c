@@ -1,20 +1,19 @@
 /*
- * file:        testDemo.c
- * func:        sort strings
- * author:      liuxueneng@airfly
- * date:        20190417
- *
+ * Name:        testDemo.c
+ * DestroySort: sort Chinese strings
+ * Author:      liuxueneng@airfly
+ * Date:        20190417
+ * Modify:      20190423
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 #include <unistd.h>
 
 //usr func head
 #include "StringSort.h"
-
-
 
 int main(int argc, char **argv)
 {
@@ -24,7 +23,7 @@ int main(int argc, char **argv)
     int ret = -1;
 
     if (argc < 2) {
-        printf("parameters wrong\n");
+        printf("Please input file name\n");
         return -1;
     }
 
@@ -35,9 +34,10 @@ int main(int argc, char **argv)
         return -2;
     }
 
+    //set env language code
+    setlocale (LC_ALL, "zh_CN.UTF-8");
 
-    ret = InitSort(file, &usrStr);
-    if(ret < 0 )
+    if(ret < InitSort(file, &usrStr) < 0 )
     {
         printf("init sort failed\n");
         return -3;

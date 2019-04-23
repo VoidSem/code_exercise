@@ -3,15 +3,13 @@
 #
 #
 
-#define var
-CC=gcc
 CXX=g++
-TARGET=TestDemo
+TARGET=SortString
 CXXFLAGS = -std=c++11
 
 #files
-objects = TestDemo.o StringSort.o
-headers = StringSort.h
+objects = $(TARGET).o
+headers =
 
 #rules
 $(TARGET): $(objects)

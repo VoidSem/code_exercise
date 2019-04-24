@@ -13,26 +13,27 @@
 #include <pthread.h>
 #include <stdint.h>
 
+typedef struct pthreadArg_s {
+    unsigned char       mode;
+    void                *p;
+}pthreadArg_t;
+
 class MultiPthread
 {
     public:
         MultiPthread(int64_t num);
+
         void RunPthread();
+
         void PrintShow();
 
         /*increase val*/
-        void DoThread1();
-        void DoThread2();
-        void DoThread3();
-        void DoThread4();
+        void DoThread(unsigned char mode);
 
         static long long GetNowMs();
 
         /* pthread handlers */
-        static void* HandlePthread1(void *arg);
-        static void* HandlePthread2(void *arg);
-        static void* HandlePthread3(void *arg);
-        static void* HandlePthread4(void *arg);
+        static void* HandlePthread(void *arg);
 
         virtual ~MultiPthread();
 
@@ -48,7 +49,6 @@ class MultiPthread
         int64_t maxNum;
         /* mutexs */
         pthread_mutex_t pThreadMutex;
-
 };
 
 #endif // MULTI_PTHREAD_H

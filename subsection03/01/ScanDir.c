@@ -1,9 +1,9 @@
 /*
- * file:        StringSort.c
- * func:        sort string
- * author:      liuxueneng@airFly
- * date:        20190417
- *
+ * Name:        StringSort.c
+ * Description: sort string
+ * Author:      liuxueneng@iairFly
+ * Date:        20190417
+ * Modify:      20190424
  */
 
 #include <stdio.h>
@@ -17,15 +17,14 @@
 
 #include "ScanDir.h"
 
-
 /*
- *
- *
+ * Description: scan dir caculate total file size
+ * and large file num
  */
 int ScanDir(const char *usrDir, scanDir_t *usrScan)
 {
-    DIR *pDir = NULL ;
-    struct dirent *pDirent = NULL;
+    DIR *dir = NULL ;
+    struct dirent *dirent = NULL;
     struct stat fileStat = {};
     char fullPath[PATH_MAX] = {};
 
@@ -37,23 +36,23 @@ int ScanDir(const char *usrDir, scanDir_t *usrScan)
     memset(usrScan, 0, sizeof(scanDir_t));
 
     snprintf(usrScan->path, MAX_NAME_LEN,"%s",usrDir);
-    pDir = opendir(usrDir);
-    if(NULL == pDir) {
+    dir = opendir(usrDir);
+    if(NULL == dir) {
         printf("%s open dir:%s %s\n",__func__, usrDir, strerror(errno));
         return -2;
     }
 
 
     //start scan dir
-    for(pDirent = readdir(pDir); NULL != pDirent; pDirent = readdir(pDir))
+    for(dirent = readdir(dir); NULL != dirent; dirent = readdir(dir))
     {
-        if (strcmp(pDirent->d_name, ".") == 0 
-                || strcmp(pDirent->d_name, "..") == 0) {
+        if (strcmp(dirent->d_name, ".") == 0
+                || strcmp(dirent->d_name, "..") == 0) {
             continue;
         }
 
         memset(fullPath,0,sizeof(fullPath));
-        sprintf(fullPath, "%s/%s", usrDir, pDirent->d_name);
+        sprintf(fullPath, "%s/%s", usrDir, dirent->d_name);
 
         //printf("fullPath:%s\n",fullPath);
         if (stat(fullPath, &fileStat) < 0) {
@@ -85,15 +84,14 @@ int ScanDir(const char *usrDir, scanDir_t *usrScan)
 
     }
 
-    closedir(pDir);
+    closedir(dir);
     return 0;
 
 ERROR1:
-    closedir(pDir);
+    closedir(dir);
 ERROR:
     return -1;
 }
-
 
 int OutShow(const scanDir_t *usrScan)
 {

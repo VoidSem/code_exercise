@@ -7,7 +7,6 @@
  */
 
 #include "Server.h"
-#include "Client.h"
 #include <thread>
 #include <sys/timerfd.h>
 
@@ -18,32 +17,35 @@
 #define         MAX_CLIENT_NUM          (1000)
 
 /*wait seconds close client*/
-#define         CLIENT_WAIT_SEC         (10)
+#define         CLIENT_WAIT_SEC         (10 * 10)
 
 using namespace std;
 
-int RecvHandle(int epFd, int timerFd);
-int TimerFdInit(int epFd);
+int ClientInit(int port, const char *ip);
 
+void ClientDestroy(int fd);
 
-typedef struct timerCnt_s {
+int RecvHandle(int epFd);
+
+typedef struct clientInfo_s {
     int fd;
-    unsigned char timeCount;
-} timerCnt_t;
+    uint64_t timeOut;
+} clientInfo_t;
 
 
-static vector <Client *> demoClient;
-//static Client *demoClient[MAX_CLIENT_NUM] = {};
+static vector <clientInfo_t > client;
 
-static void ClientDisConnect(int fd)
+int SetReadyClose(int fd)
 {
-    for (int i = 0; i < MAX_CLIENT_NUM; ++i) {
+    for (auto c = client.begin(); c != client.end(); ++c) {
         /*match client*/
-        if (demoClient[i] && fd == demoClient[i]->GetClient()) {
-            /*close sock*/
-            demoClient[i]->DisConnect();
+        if(fd == c->fd) {
+            c->timeOut = 0;
+            //cout <<"set read"<<c->fd<<endl;
+            return 0;
         }
     }
+    return -1;
 }
 
 long long GetNowMs()
@@ -56,20 +58,13 @@ long long GetNowMs()
 
 int main()
 {
-    Server *demoServer = new Server(COMMON_SERVER_PORT, COMMON_SERVER_IP, COMMON_BACK_LOG);
-
-    if( demoServer->Init() < 0) {
-        delete demoServer;
-        return -1;
-    }
 
 
     pid_t pid = fork();
 
     if (0 == pid) {
         /*this is child */
-        delete demoServer;
-
+        sleep(1);
         /* init epoll */
         int epFd = epoll_create(EPOLL_SIZE);
         if(epFd < 0) {
@@ -77,53 +72,42 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        /* init timer fd */
-        int timerFd = TimerFdInit(epFd);
-        if(timerFd < 0) {
-            exit(EXIT_FAILURE);
-        }
-
-        thread *epollThread = new thread(RecvHandle, epFd, timerFd);
+        thread *epollThread = new thread(RecvHandle, epFd);
 
         long long startTime = GetNowMs();
 
         /* init clients*/
         struct epoll_event ev;
         ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
-        int tmpFd = -1;
         char buf[BUFSIZ] =  {};
+        clientInfo_t tmpInfo = {};
 
         for(int i = 0; i < MAX_CLIENT_NUM; ++i) {
-            Client *tmpClient = new Client(COMMON_SERVER_PORT, COMMON_SERVER_IP);
-
-            if(tmpClient->Init() < 0) {
-                continue;
+            tmpInfo.fd = ClientInit(COMMON_SERVER_PORT, COMMON_SERVER_IP);
+            if(tmpInfo.fd < 0) {
+                exit(EXIT_FAILURE);
             }
             //send ping
             size_t len = strlen(SEND_STRING_PING) + 1;
-            tmpClient->SendMsg(SEND_STRING_PING, len, 0);
+            if(send(tmpInfo.fd, SEND_STRING_PING, len, 0) < 0) {
+                perror("send error");
+            }
 
+            ev.data.fd = tmpInfo.fd;
             /*add to epoll wait queue for receive*/
-            tmpFd = tmpClient->GetClient();
-            ev.data.fd = tmpFd;
-            epoll_ctl(epFd, EPOLL_CTL_ADD, tmpFd, &ev);
+            epoll_ctl(epFd, EPOLL_CTL_ADD, tmpInfo.fd, &ev);
+            tmpInfo.timeOut = -1;
+
 
             /* add to vector */
-            demoClient.push_back(tmpClient);
+            client.push_back(tmpInfo);
         }
 
         epollThread->join();
         cout <<"start exit"<<endl;
 
         delete epollThread;
-        close(timerFd);
         close(epFd);
-
-        /*free clients*/
-        for(auto c = demoClient.begin(); c != demoClient.end(); ++c) {
-            delete *c;
-        }
-        demoClient.clear();
 
         long long endTime = GetNowMs();
         cout <<"use "<<endTime - startTime<<"ms"<<endl;
@@ -131,85 +115,84 @@ int main()
     }
     else if(pid > 0) {
         /*this is father*/
-        demoServer->Start();
+        Server *demoServer = new Server(COMMON_SERVER_PORT, COMMON_SERVER_IP, COMMON_BACK_LOG);
+
+        if( 0 == demoServer->Init() ) {
+            demoServer->Start();
+        }
+        else {
+            perror("server init failed");
+        }
 
         waitpid(pid, NULL, 0);
+
         delete demoServer;
     }
 
     return 0;
 }
 
-int RecvHandle(int epFd, int timerFd)
+int RecvHandle(int epFd)
 {
     struct epoll_event epEvents[EPOLL_SIZE] = {};
-    vector <timerCnt_t> readClient;
-    uint64_t disconnectNum = 0;
+    uint64_t closeNum = 0;
     uint64_t readNum = 0;
-    int timeOut = -1;
-    uint64_t totalExp = 0;
+    //blocked
+    int timeOutMs = 100;
     while (1)
     {
-        //blocked
-        int eventNum = epoll_wait(epFd, epEvents, EPOLL_SIZE, timeOut);
+        int eventNum = epoll_wait(epFd, epEvents, EPOLL_SIZE, timeOutMs);
         if(eventNum < 0) {
             perror("epoll failure");
             return -1;
         }
+        else if(eventNum == 0) {
+            auto r = client.begin();
+            while (r != client.end()) {
+                if(r->timeOut < 0) {
+                    ++r;
+                    continue;
+                }
+                ++r->timeOut;
+                //cout <<r->fd <<" timeOut "<< r->timeOut<<endl;
+                if(r->timeOut > CLIENT_WAIT_SEC) {
+                    /*delete epoll*/
+                    epoll_ctl(epFd, EPOLL_CTL_DEL,r->fd, NULL);
+                    /*callback client func close*/
+                    ClientDestroy(r->fd);
+                    /*note*/
+                    r = client.erase(r);
 
+                    if(++closeNum  >= MAX_CLIENT_NUM) {
+                        cout <<"Disconnect all client ok"<<endl;
+                        return 0;
+                    }
+                    //cout <<"Disconnect "<<closeNum<<endl;
+                }
+                else {
+                    ++r;
+                }
+            }
+
+            continue;
+        }
         //handle epEvents
         for(int i = 0; i < eventNum; ++i) {
             int tmpFd = epEvents[i].data.fd;
             if(epEvents[i].events & EPOLLIN) {
-                if (timerFd == tmpFd) {
-                    uint64_t tmpExp = 0;
-                    read(timerFd, &tmpExp, sizeof(uint64_t));
-                    auto r = readClient.begin();
-                    while (r != readClient.end()) {
-                        ++r->timeCount;
-                        if(r->timeCount > CLIENT_WAIT_SEC) {
-                            /*delete epoll*/
-                            epoll_ctl(epFd, EPOLL_CTL_DEL,r->fd, NULL);
-                            /*callback client func close*/
-                            ClientDisConnect(r->fd);
-
-                            /*note*/
-                            r = readClient.erase(r);
-                            ++disconnectNum;
-                            //cout <<"Disconnect "<<disconnectNum<<endl;
-                        }
-                        else {
-                            ++r;
-                        }
-                    }
-
-                    if(disconnectNum  >= MAX_CLIENT_NUM) {
-                        cout <<"Disconnect all client ok"<<endl;
-                        readClient.clear();
-                        return 0;
-                    }
-                    totalExp += tmpExp;
-                    cout<<"timer count "<<totalExp<<endl;
+                char buf[BUFSIZ] = {};
+                if(recv(tmpFd, buf, BUFSIZ, 0) < 0) {
+                    cerr<<strerror(errno)<<endl;
                 }
                 else {
-                    char buf[BUFSIZ] = {};
-                    if(recv(tmpFd, buf, BUFSIZ, 0) < 0) {
-                        cerr<<strerror(errno)<<endl;
+                    cout <<buf<<endl;
+                    if(strcmp(buf, SEND_STRING_PONG)) {
+                        continue;
                     }
-                    else {
-                        cout <<buf<<endl;
-                        if(strcmp(buf, SEND_STRING_PONG)) {
-                            continue;
-                        }
-                        /* if get pong start disconnect */
-                        timerCnt_t tmpCnt = {};
-                        tmpCnt.fd = tmpFd;
-                        tmpCnt.timeCount = 0;
-                        /* add to vector*/
-                        readClient.push_back(tmpCnt);
-                        if(++readNum >= MAX_CLIENT_NUM) {
-                            cout <<"read all client "<<readNum <<endl;
-                        }
+                    /* if get pong start close */
+                    SetReadyClose(tmpFd);
+                    if(++readNum >= MAX_CLIENT_NUM) {
+                        cout <<"read all client "<<readNum <<endl;
                     }
                 }
             }
@@ -218,33 +201,54 @@ int RecvHandle(int epFd, int timerFd)
     return 0;
 }
 
-
-int TimerFdInit( int epFd)
+/********************************
+* Function:     ClientInit
+* Description: create socket and connect to server
+* Input: port ip
+* OutPut: socket fd
+* Return: socket d
+* Others:
+********************************/
+int ClientInit(int port, const char *ip)
 {
-    struct itimerspec new_value;
-    /*init time*/
-    new_value.it_value.tv_sec = 1;
-    new_value.it_value.tv_nsec = 0;
-    /*time interval*/
-    new_value.it_interval.tv_sec = 1;
-    new_value.it_interval.tv_nsec = 0;
+    struct sockaddr_in svrAddr = {};
+    svrAddr.sin_family = PF_INET;
+    svrAddr.sin_port = htons(port);
+    svrAddr.sin_addr.s_addr = inet_addr(ip);
 
-    int timerFd = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (timerFd < 0) {
-        cerr<<strerror(errno)<<endl;
+/*create socket and connet to server*/
+    int sockFd = socket(PF_INET, SOCK_STREAM, 0);
+    if(sockFd < 0) {
+        perror("sock error");
         return -1;
     }
 
-    int ret = timerfd_settime(timerFd, 0, &new_value, NULL);
-    if (ret < 0) {
-        cerr<<strerror(errno)<<endl;
-        close(timerFd);
-        return -1;
+    int addrLen = sizeof(svrAddr);
+    if(connect(sockFd, (struct sockaddr *)&svrAddr, sizeof(svrAddr)) < 0) {
+        close(sockFd);
+        perror("connect error");
+        return -2;
     }
-    /* add to epoll */
-    struct epoll_event ev;
-    ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
-    ev.data.fd = timerFd;
-    epoll_ctl(epFd, EPOLL_CTL_ADD, timerFd, &ev);
-    return timerFd;
+    return sockFd;
+}
+
+/********************************
+* Function:
+* Description:
+* Input:
+* OutPut:
+* Return:
+* Others:
+********************************/
+void ClientDestroy(int fd)
+{
+    struct stat _stat = {};
+
+    /*check the fd*/
+    if (!fstat(fd, &_stat)) {
+        /*fd hard link nums*/
+        if (_stat.st_nlink >= 1) {
+            close(fd);
+        }
+    }
 }

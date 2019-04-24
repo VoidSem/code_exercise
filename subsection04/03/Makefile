@@ -10,8 +10,8 @@ TARGET = TestDemo
 CXXFLAGS = -pthread -std=c++11
 
 #files
-objects = $(TARGET).o Server.o Client.o
-headers = Server.h Common.h Client.h
+objects = $(TARGET).o Server.o
+headers = Server.h Common.h
 
 #rules
 $(TARGET): $(objects)

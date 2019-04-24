@@ -10,7 +10,7 @@
 #define COMMON_H
 
 #include <iostream>
-#include <list>
+#include <vector>
 
 #define         COMMON_SERVER_PORT      (8000)
 #define         COMMON_BACK_LOG      	(1024)

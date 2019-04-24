@@ -103,7 +103,6 @@ void Server::DeleteClient(int fd)
 int Server::ClientHandle(int fd) {
     char buf[BUFSIZ] = {};
 
-    //cout <<"handle "<< fd <<endl;
     int ret = recv(fd, buf, BUFSIZ, 0);
     if (ret < 0) {
         DeleteClient(fd);
@@ -111,12 +110,15 @@ int Server::ClientHandle(int fd) {
     }
 
     cout<< buf<<endl;
-    int len = strlen(SEND_STRING_PONG) + 1;
 
-    ret = send(fd, SEND_STRING_PONG, len, 0);
-    if (ret < len) {
-        DeleteClient(fd);
-        return -1;
+    /* if get ping send pong  */
+    if (0 == strcmp(buf, SEND_STRING_PING)) {
+        int len = strlen(SEND_STRING_PONG) + 1;
+        ret = send(fd, SEND_STRING_PONG, len, 0);
+        if (ret < len) {
+            DeleteClient(fd);
+            return -1;
+        }
     }
     return 0;
 }

@@ -108,6 +108,11 @@ int main()
         close(timerFd);
         close(epFd);
 
+        /*free clients*/
+        for(int i = 0; i < MAX_CLIENT_NUM; ++i) {
+            delete demoClient[i];
+        }
+
         long long endTime = GetNowMs();
         cout <<"use "<<endTime - startTime<<"ms"<<endl;
         exit(EXIT_SUCCESS);
@@ -148,15 +153,17 @@ int RecvHandle(int epFd, int timerFd)
                         if (readClient[i].fd > 0) {
                             if(++readClient[i].timeCount > CLIENT_WAIT_SEC) {
                                 /*close client*/
+                                epoll_ctl(epFd, EPOLL_CTL_DEL,
+                                        readClient[i].fd, NULL);
                                 close(readClient[i].fd);
-                                cout <<"close "<<i<<endl;
                                 readClient[i].fd = -1;
                                 startIdx = i;
+                                //cout <<"close "<<i<<endl;
                             }
                         }
                     }
                     totalExp += tmpExp;
-                    cout<<"timer "<<totalExp<<endl;
+                    cout<<"timer count "<<totalExp<<endl;
 
                     if(startIdx + 1 >= MAX_CLIENT_NUM) {
                         cout <<"close all client ok"<<endl;
@@ -172,8 +179,9 @@ int RecvHandle(int epFd, int timerFd)
                         /*get pong and start count close*/
                         cout <<buf<<endl;
                         /*delete epoll*/
-                        epoll_ctl(epFd, EPOLL_CTL_DEL, tmpFd, NULL);
+                        //epoll_ctl(epFd, EPOLL_CTL_DEL, tmpFd, NULL);
                         readClient[readNum].fd = tmpFd;
+                        readClient[readNum].timeCount = 0;
                         if(++readNum >= MAX_CLIENT_NUM) {
                             cout <<"read all client ok"<<endl;
                         }

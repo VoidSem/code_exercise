@@ -39,8 +39,14 @@ int Client::Init()
 
 Client::~Client()
 {
-    if (sockFd > 0) {
-        close(sockFd);
+    struct stat fileStat = {};
+
+    /*check the fd*/
+    if (!fstat(sockFd, &fileStat)) {
+        if (fileStat.st_nlink >= 1) {
+            close(sockFd);
+            //cout<<"client close "<<endl;
+        }
     }
 }
 

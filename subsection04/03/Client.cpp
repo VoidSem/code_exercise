@@ -44,11 +44,16 @@ int Client::GetClient()
 
 Client::~Client()
 {
-#if 0
-    if (sockFd > 0) {
-        close(sockFd);
+    struct stat _stat = {};
+
+    /*check the fd*/
+    if (!fstat(sockFd, &_stat)) {
+        /*fd hard link nums*/
+        if (_stat.st_nlink >= 1) {
+            //cout<<"close "<<sockFd<<endl;
+            close(sockFd);
+        }
     }
-#endif
 }
 
 int Client::SendMsg(const char *buf, size_t len, int mode)

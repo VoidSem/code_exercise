@@ -3,7 +3,7 @@
  * Description: sock communicate test client
  * Author:      liuxueneng@iairfly
  * Date:        20190419
- * Modify:      20190423
+ * Modify:      20190424
  */
 
 #include "Client.h"
@@ -42,7 +42,7 @@ int Client::GetClient()
     return sockFd;
 }
 
-Client::~Client()
+void Client::DisConnect()
 {
     struct stat _stat = {};
 
@@ -54,6 +54,11 @@ Client::~Client()
             close(sockFd);
         }
     }
+}
+
+Client::~Client()
+{
+    DisConnect();
 }
 
 int Client::SendMsg(const char *buf, size_t len, int mode)

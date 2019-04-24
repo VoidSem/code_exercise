@@ -34,7 +34,19 @@ typedef struct timerCnt_s {
     unsigned char timeCount;
 } timerCnt_t;
 
-timerCnt_t readClient[MAX_CLIENT_NUM] = {};
+
+static Client *demoClient[MAX_CLIENT_NUM] = {};
+
+static void ClientDisConnect(int fd)
+{
+    for (int i = 0; i < MAX_CLIENT_NUM; ++i) {
+        /*match client*/
+        if (demoClient[i] && fd == demoClient[i]->GetClient()) {
+            /*close sock*/
+            demoClient[i]->DisConnect();
+        }
+    }
+}
 
 long long GetNowMs()
 {
@@ -82,7 +94,6 @@ int main()
         ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
         int tmpFd = -1;
         char buf[BUFSIZ] =  {};
-        Client *demoClient[MAX_CLIENT_NUM] = {};
 
         for(int i = 0; i < MAX_CLIENT_NUM; ++i) {
             demoClient[i] = new Client(COMMON_SERVER_PORT, COMMON_SERVER_IP);
@@ -110,7 +121,9 @@ int main()
 
         /*free clients*/
         for(int i = 0; i < MAX_CLIENT_NUM; ++i) {
-            delete demoClient[i];
+            if (demoClient[i]) {
+                delete demoClient[i];
+            }
         }
 
         long long endTime = GetNowMs();
@@ -131,6 +144,7 @@ int main()
 int RecvHandle(int epFd, int timerFd)
 {
     struct epoll_event epEvents[EPOLL_SIZE] = {};
+    timerCnt_t readClient[MAX_CLIENT_NUM] = {};
     int timeOut = -1;
     uint64_t totalExp = 0;
     while (1)
@@ -155,7 +169,8 @@ int RecvHandle(int epFd, int timerFd)
                                 /*close client*/
                                 epoll_ctl(epFd, EPOLL_CTL_DEL,
                                         readClient[i].fd, NULL);
-                                close(readClient[i].fd);
+                                /*callback client func close*/
+                                ClientDisConnect(readClient[i].fd);
                                 readClient[i].fd = -1;
                                 startIdx = i;
                                 //cout <<"close "<<i<<endl;
@@ -166,7 +181,7 @@ int RecvHandle(int epFd, int timerFd)
                     cout<<"timer count "<<totalExp<<endl;
 
                     if(startIdx + 1 >= MAX_CLIENT_NUM) {
-                        cout <<"close all client ok"<<endl;
+                        cout <<"Disconnect all client ok"<<endl;
                         return 0;
                     }
                 }

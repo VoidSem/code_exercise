@@ -26,6 +26,9 @@ class Client {
         /*get client socket fd*/
         int GetClient(void);
 
+        /*close sockfd*/
+        void DisConnect();
+
         virtual ~Client();
 
     private:

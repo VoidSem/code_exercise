@@ -27,7 +27,6 @@ int RecvHandle(int epFd, int timerFd);
 int TimerFdInit(int epFd);
 
 static uint64_t readNum = 0;
-static uint64_t startIdx = 0;
 
 typedef struct timerCnt_s {
     int fd;
@@ -145,6 +144,7 @@ int RecvHandle(int epFd, int timerFd)
 {
     struct epoll_event epEvents[EPOLL_SIZE] = {};
     timerCnt_t readClient[MAX_CLIENT_NUM] = {};
+    uint64_t disconnectNum = 0;
     int timeOut = -1;
     uint64_t totalExp = 0;
     while (1)
@@ -163,7 +163,7 @@ int RecvHandle(int epFd, int timerFd)
                 if (timerFd == tmpFd) {
                     uint64_t tmpExp = 0;
                     read(timerFd, &tmpExp, sizeof(uint64_t));
-                    for(int i = startIdx; i <  readNum; ++i) {
+                    for(int i = 0; i <  readNum; ++i) {
                         if (readClient[i].fd > 0) {
                             if(++readClient[i].timeCount > CLIENT_WAIT_SEC) {
                                 /*close client*/
@@ -172,18 +172,18 @@ int RecvHandle(int epFd, int timerFd)
                                 /*callback client func close*/
                                 ClientDisConnect(readClient[i].fd);
                                 readClient[i].fd = -1;
-                                startIdx = i;
+                                ++disconnectNum;
                                 //cout <<"close "<<i<<endl;
                             }
                         }
                     }
-                    totalExp += tmpExp;
-                    cout<<"timer count "<<totalExp<<endl;
 
-                    if(startIdx + 1 >= MAX_CLIENT_NUM) {
+                    if(disconnectNum  >= MAX_CLIENT_NUM) {
                         cout <<"Disconnect all client ok"<<endl;
                         return 0;
                     }
+                    totalExp += tmpExp;
+                    cout<<"timer count "<<totalExp<<endl;
                 }
                 else {
                     char buf[BUFSIZ] = {};

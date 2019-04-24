@@ -23,6 +23,9 @@ class Client {
         /*recv msg from the server*/
         int RecvMsg(char *buf, size_t len, int mode);
 
+        /*get client socket fd*/
+        int GetClient(void);
+
         virtual ~Client();
 
     private:

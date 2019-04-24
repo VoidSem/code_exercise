@@ -36,12 +36,19 @@ int Client::Init()
     return 0;
 }
 
+/*return socket fd*/
+int Client::GetClient()
+{
+    return sockFd;
+}
 
 Client::~Client()
 {
+#if 0
     if (sockFd > 0) {
         close(sockFd);
     }
+#endif
 }
 
 int Client::SendMsg(const char *buf, size_t len, int mode)

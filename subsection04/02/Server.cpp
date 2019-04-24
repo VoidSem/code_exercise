@@ -126,7 +126,8 @@ int Server::Start()
 {
     struct epoll_event epEvents[EPOLL_SIZE] = {};
     int timeOut = -1;
-    cout<<"start epoll wait..."<<endl;
+    //cout<<"start epoll wait..."<<endl;
+    //only receive one client connect and one msg
     while (1)
     {
         //blocked
@@ -155,6 +156,9 @@ int Server::Start()
                 else {  //client msg
                     if(ClientHandle(tmpFd) < 0) {
                         cerr<< strerror(errno)<<endl;
+                    }
+                    else {
+                        return 0;
                     }
                 }
             }

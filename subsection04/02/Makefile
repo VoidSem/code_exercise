@@ -15,10 +15,10 @@ headers = Server.h Common.h Client.h
 
 #rules
 $(TARGET): $(objects)
-	$(CXX)  $(CFLAGS) $^ -o $@
+	$(CXX)  $(CXXFLAGS) $^ -o $@
 
 %.o: %.cpp $(headers)
-	$(CXX) -c $(CFLAGS) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY : clean
 clean :

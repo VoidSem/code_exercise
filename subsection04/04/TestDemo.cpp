@@ -3,12 +3,12 @@
  * Description: sock communicate test demo
  * Author:      liuxueneng@iairfly
  * Date:        20190423
- * Modify:      20190424
+ * Modify:      20190425
  */
 
 #include "Server.h"
 #include <thread>
-#include <sys/timerfd.h>
+#include <map>
 
 #define         COMMON_SERVER_PORT      (8000)
 #define         COMMON_SERVER_IP        ("127.0.0.1")
@@ -33,17 +33,15 @@ typedef struct clientInfo_s {
 } clientInfo_t;
 
 
-static vector <clientInfo_t > client;
+static map<int, clientInfo_t > client;
 
 int SetReadyClose(int fd)
 {
-    for (auto c = client.begin(); c != client.end(); ++c) {
-        /*match client*/
-        if(fd == c->fd) {
-            c->timeOut = 0;
-            //cout <<"set read"<<c->fd<<endl;
-            return 0;
-        }
+    auto m = client.find(fd);
+    if (m != client.end()) {
+        m->second.timeOut = 0;
+        //cout <<"set ready "<<m->second.fd<<endl;
+        return 0;
     }
     return -1;
 }
@@ -99,8 +97,8 @@ int main()
             tmpInfo.timeOut = -1;
 
 
-            /* add to vector */
-            client.push_back(tmpInfo);
+            /* add to map */
+            client[tmpInfo.fd] = tmpInfo;
         }
 
         epollThread->join();
@@ -149,17 +147,17 @@ int RecvHandle(int epFd)
         else if(eventNum == 0) {
             auto r = client.begin();
             while (r != client.end()) {
-                if(r->timeOut < 0) {
+                if(r->second.timeOut < 0) {
                     ++r;
                     continue;
                 }
-                ++r->timeOut;
-                //cout <<r->fd <<" timeOut "<< r->timeOut<<endl;
-                if(r->timeOut > CLIENT_WAIT_SEC) {
+                ++r->second.timeOut;
+                //cout <<r->second.fd <<" timeOut "<< r->second.timeOut<<endl;
+                if(r->second.timeOut > CLIENT_WAIT_SEC) {
                     /*delete epoll*/
-                    epoll_ctl(epFd, EPOLL_CTL_DEL,r->fd, NULL);
+                    epoll_ctl(epFd, EPOLL_CTL_DEL,r->second.fd, NULL);
                     /*callback client func close*/
-                    ClientDestroy(r->fd);
+                    ClientDestroy(r->second.fd);
                     /*note*/
                     r = client.erase(r);
 
